@@ -1,7 +1,7 @@
 
 from langchain_openai import ChatOpenAI
 from llm.domain.llm_client import LlmClient
-from llm.domain.llm_config import LlmConfig
+from llm.domain.llm_entities import LlmConfig
 from shared.init_logger import init_logger
 
 class OpenAIClient(LlmClient):
