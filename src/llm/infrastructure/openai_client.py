@@ -16,9 +16,10 @@ class OpenAIClient(LlmClient):
             
             self.log(f"Creando el cliente ai con modelo {config.model}")
             return ChatOpenAI(
+                name=config.name_agent,
                 api_key= config.api_key,
                 model= config.model,
-                temperature= config.temperature
+                temperature= config.temperature,
             )
             
         except Exception as e:
