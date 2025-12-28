@@ -1,6 +1,7 @@
 from typing import Dict
 from llm.domain.llm_entities import LLMRequestConfig, LlmConfig
 from llm.domain.llm_exceptions import ServiceLLMError, LLMServiceConfigurationError
+from llm.domain.llm_service import LlmService
 from llm.infrastructure.openai_client import OpenAIClient
 from shared.init_logger import init_logger
 from shared.config import settings
@@ -9,7 +10,9 @@ from langchain_core.runnables import Runnable
 from langchain.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-class OpenAiService(OpenAIClient):
+from shared.prompts import PromptManager
+
+class OpenAiService(LlmService):
     
     def __init__(self):
         self.log = init_logger("open_ai_service")
@@ -19,7 +22,7 @@ class OpenAiService(OpenAIClient):
             "TEXT": self._create_text_prompt,
         }
     
-    def set_llm_Service(self, llm_config: LLMRequestConfig) -> Runnable:
+    async def set_llm_Service(self, llm_config: LLMRequestConfig) -> Runnable:
         
         self.log("Create chain langchain prompt + llm + structure output")
         try:
@@ -56,11 +59,12 @@ class OpenAiService(OpenAIClient):
             )
             self.log(f"[ERROR] {error.to_dict()}")
             raise error
-    
+
     def _create_image_prompt(self) -> ChatPromptTemplate:
-        
-        system_message = SystemMessage(content="You are a helpful assistant that helps people find information.")
-        
+        #prompt_system = PromptManager.get_prompt("SystemPrompts", "CLASSIFY_ASSISTANT")
+        self.log(f"Creating image prompt strategy for multimodal input.")
+
+        system_message = SystemMessage(content= "{system_content}")
         human_message = HumanMessage(content= [
             {"type": "text", "text": "{text_content}"},
             {
@@ -75,7 +79,7 @@ class OpenAiService(OpenAIClient):
             human_message
         ])
         return prompt
-    
+
     def _create_text_prompt(self) -> ChatPromptTemplate:
         
         system_message = SystemMessage(content="You are a helpful assistant that helps people find information.")
@@ -96,5 +100,3 @@ class OpenAiService(OpenAIClient):
             raise ServiceLLMError(f"El tipo de prompt '{type}' no es válido.")
         
         return stratefy()
-        
-        

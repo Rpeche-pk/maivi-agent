@@ -5,5 +5,5 @@ from llm.domain.llm_entities import LLMRequestConfig
 class LlmService(ABC):
     
     @abstractmethod
-    def set_llm_Service(llm_config : LLMRequestConfig) -> Runnable:
+    async def set_llm_Service(llm_config : LLMRequestConfig) -> Runnable:
         pass
