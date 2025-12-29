@@ -8,13 +8,13 @@ class OpenAIClient(LlmClient):
     
     
     def __init__(self):
-        self.log = init_logger("open_ai_client")
+        self.log = init_logger(self.__class__.__name__)
         
 
     def llm_client(self,config :LlmConfig) -> ChatOpenAI:
         try:
             
-            self.log(f"Creando el cliente ai con modelo {config.model}")
+            self.log.info(f"[INFRASTRUCTURE] Creando el cliente ai con modelo {config.model}")
             return ChatOpenAI(
                 name=config.name_agent,
                 api_key= config.api_key,
@@ -23,5 +23,5 @@ class OpenAIClient(LlmClient):
             )
             
         except Exception as e:
-            self.log(f"[ERROR] details: {e}")
+            self.log.error(f"[ERROR] details: {e}")
             raise

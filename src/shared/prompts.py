@@ -70,16 +70,24 @@ class SystemPrompts:
 class UserPrompts:
     """User-facing prompts for various tasks."""
     
-    SUMMARIZE_TEXT = PromptTemplate(
-        content="""Resume el siguiente texto en {max_words} palabras, manteniendo los puntos clave:
+    BUILD_USER_PROMPT_IMAGE = PromptTemplate(
+        content="""
+        Analiza cuidadosamente la siguiente imagen.
 
-Texto:
-{text}
+        Si la imagen corresponde a un recibo de servicio público, clasifícalo estrictamente en una de las siguientes categorías:
+        - AGUA
+        - LUZ
+        - GAS
 
-Resumen:""",
+        Responde únicamente con una de esas palabras en mayúsculas.
+        No agregues explicaciones, comentarios ni texto adicional.
+
+        Si la imagen no corresponde a un recibo de servicios públicos, responde exactamente:
+        NO_VALIDO
+        """,
         category=PromptCategory.USER,
-        name="SUMMARIZE_TEXT",
-        description="Prompt para resumir texto"
+        name="BUILD_USER_PROMPT_IMAGE",
+        description="Prompt del usuario para clasificar el recibo que el agente recibe por input"
     )
 
 class PromptManager:

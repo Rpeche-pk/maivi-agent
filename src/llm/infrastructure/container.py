@@ -10,7 +10,7 @@ from shared.init_logger import init_logger
 class Container:
     
     def __init__(self):
-        self.log = init_logger("Container")
+        self.log = init_logger(self.__class__.__name__)
         self.log.info("[CONTAINER] Initializing dependency container")
         self._openai_client: Optional[LlmClient] = None
         self._openai_service: Optional[LlmService] = None

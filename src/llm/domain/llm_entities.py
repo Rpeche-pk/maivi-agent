@@ -9,12 +9,13 @@ class UserInputType(Enum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
 
+
 @dataclass
 class LlmConfig:
-    temperature: float = 0.0
-    api_key: str = settings.OPEN_AI_KEY
     model: str
     name_agent: str = settings.NAME_AGENT
+    temperature: float = 0.0
+    api_key: str = settings.OPEN_AI_KEY
     
     
 @dataclass

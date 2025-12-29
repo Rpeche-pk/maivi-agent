@@ -18,14 +18,14 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: INFO
     formatter: simple
-    filename: log_vea.log
+    filename: log_agent_ai.log
     when: midnight
     interval: 1
     backupCount: 15
     encoding: utf8
 
 loggers:
-  scraping_vea:
+  ai_service:
     level: INFO
     handlers: [console, file]
     propagate: no
