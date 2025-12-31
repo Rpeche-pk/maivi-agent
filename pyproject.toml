@@ -1,7 +1,7 @@
 [project]
 name = "agent-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "Agent specialized in classifying electricity, water and gas bills in the Peruvian state"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
@@ -11,4 +11,4 @@ where = ["./"]
 include = ["src"]
 
 [project.scripts]
-run-module= "src.app:main"
+start= "src.app:main"

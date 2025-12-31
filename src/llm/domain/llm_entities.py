@@ -20,8 +20,13 @@ class LlmConfig:
     
 @dataclass
 class LLMRequestConfig:
+    """Para analizar una imagen debes elegir el type (IMAGE)y llenar el campo image_base64"""
     input_type: UserInputType
     prompt: str
+    image_base64: Optional[str] = None
     tools: Optional[List[Any]] = None
     structured_output: Optional[Type[BaseModel]] = None
     temperature: float = 0.0
+    
+class ImagePrompt:
+    chat_prompt: str

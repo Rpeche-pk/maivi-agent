@@ -1,3 +1,4 @@
+import base64
 from typing import Dict, Callable
 from llm.domain.llm_entities import LLMRequestConfig, LlmConfig
 from llm.domain.llm_exceptions import ServiceLLMError, LLMServiceConfigurationError
@@ -8,15 +9,14 @@ from shared.config import settings
 
 from langchain_core.runnables import Runnable
 from langchain.messages import SystemMessage, HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
 class OpenAiService(LlmService):
     
     def __init__(self):
         self.log = init_logger(self.__class__.__name__)
         self.llm = OpenAIClient()
-        self._prompt_strategies: Dict[str, Callable[[str], ChatPromptTemplate]] = {
+        self._prompt_strategies: Dict[str, Callable] = {
             "IMAGE": self._create_image_prompt,
             "TEXT": self._create_text_prompt,
         }
@@ -38,7 +38,7 @@ class OpenAiService(LlmService):
                 self.log.info("[INFRASTRUCTURE] establishing an output structure for the llm")
                 instance_llm = instance_llm.with_structured_output(llm_config.structured_output)
 
-            prompt = self._set_prompt_multimodal(llm_config.input_type.value, llm_config.prompt)
+            prompt = self._set_prompt_multimodal(llm_config.input_type.value, llm_config.prompt, image_base64=llm_config.image_base64)
             
             self.log.debug("[INFRASTRUCTURE] establishing prompt")
         
@@ -61,44 +61,56 @@ class OpenAiService(LlmService):
             self.log.error(f"[ERROR] {error.to_dict()}")
             raise error
 
-    def _create_image_prompt(self, prompt :str) -> ChatPromptTemplate:
-        #prompt_system = PromptManager.get_prompt("SystemPrompts", "CLASSIFY_ASSISTANT")
+    def _create_image_prompt(self, system_prompt: str, image_base64: str = None, image_path: str = None) -> ChatPromptTemplate:
+        """Crea un prompt multimodal con imagen.
+        
+        Args:
+            system_prompt: El prompt del sistema
+            image_base64: Imagen ya codificada en base64 (opcional)
+            image_path: Ruta a la imagen para codificar (opcional)
+        """
         self.log.info(f"[INFRASTRUCTURE] Creating image prompt strategy for multimodal input.")
 
-        system_message = SystemMessage(content= prompt)
-        human_message = HumanMessage(content= [
-            {"type": "text", "text": "{text_content}"},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": "data:image/jpeg;base64,{image_base64}"
-                },
-            },
-        ])
-        
-        prompt = ChatPromptTemplate(messages= [
-            system_message,
-            human_message
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", [
+                {"type": "text", "text": "{text_content}"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_base64}"
+                    }
+                }
+            ])
         ])
         return prompt
 
-    def _create_text_prompt(self, prompt :str) -> ChatPromptTemplate:
-
-        system_message = SystemMessage(content= prompt)
-        human_message = HumanMessage(content= "{message_user}")
-
-        prompt = ChatPromptTemplate(messages= [
-            system_message,
-            human_message
+    def _create_text_prompt(self, system_prompt: str, **kwargs) -> ChatPromptTemplate:
+        """Crea un prompt de solo texto.
+        
+        Args:
+            system_prompt: El prompt del sistema
+            **kwargs: Argumentos adicionales (ignorados para compatibilidad)
+        """
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{text_content}")
         ])
         return prompt
 
 
     
-    def _set_prompt_multimodal(self, type : str, prompt : str) -> ChatPromptTemplate:
-        stratefy = self._prompt_strategies.get(type)
+    def _set_prompt_multimodal(self, type: str, system_prompt: str, **kwargs) -> ChatPromptTemplate:
+        """Configura el prompt según el tipo (IMAGE o TEXT).
+        
+        Args:
+            type: Tipo de prompt (IMAGE o TEXT)
+            system_prompt: El prompt del sistema
+            **kwargs: Argumentos adicionales como image_base64, image_path, etc.
+        """
+        strategy = self._prompt_strategies.get(type)
 
-        if not stratefy:
+        if not strategy:
             raise ServiceLLMError(f"El tipo de prompt '{type}' no es válido.")
 
-        return stratefy(prompt)
+        return strategy(system_prompt, **kwargs)

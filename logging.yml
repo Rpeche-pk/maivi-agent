@@ -19,8 +19,9 @@ handlers:
     level: INFO
     formatter: simple
     filename: log_agent_ai.log
-    when: midnight
-    interval: 1
+    #when: midnight
+    #interval: 1
+    maxBytes: 5242880
     backupCount: 15
     encoding: utf8
 
