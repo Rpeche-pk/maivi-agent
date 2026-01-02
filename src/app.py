@@ -5,12 +5,12 @@ Ejecuta el sistema de clasificación de recibos.
 import asyncio
 
 from pydantic import BaseModel, Field
-from llm.infrastructure import get_container
 from llm.domain.llm_entities import LLMRequestConfig, UserInputType
 from shared.prompts import PromptManager
 import base64
 from shared.init_logger import init_logger
 from enum import Enum
+from maivi_agent.infrastructure.container import get_container
 
 log= init_logger("app.py")
 
