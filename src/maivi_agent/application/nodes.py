@@ -59,7 +59,7 @@ class WorkFlowNodes:
         self.log.info("[NODE] Validating classification node started.")
         
         
-    def max_intent_node(self, state: ReceiptState) -> dict[str, any]:
+    def max_intent_node(self, state: ReceiptState) -> Command[Literal["max_intent_node"]]:
         self.log.info(f"[NODE] Max intent validation. Intent {state.get('intent_count', 0)+1} of {state.get('limit_intents', 3)}.")
         intent_count = state.get("intent_count", 0) + 1
         limit_intents = state.get("limit_intents", 3)
@@ -76,12 +76,13 @@ class WorkFlowNodes:
             message=state["message_user"]
         )
         
-        return {
+        return Command(goto="classify_image_node",
+            update={
             **state,
             "intent_count": intent_count,
             "waiting_for_image": True,
             "image_base64": ""
-        }
+        })
         
     def max_intent_limit_node(self, state: ReceiptState) -> dict[str]:
         message = f"""❌ Lo siento, no pude procesar tu recibo después de {state['max_retries']} intentos.
