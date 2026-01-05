@@ -4,6 +4,7 @@ from llm.domain.llm_client import LlmClient
 from llm.domain.llm_service import LlmService
 from llm.infrastructure.openai_client import OpenAIClient
 from llm.infrastructure.openai_service import OpenAiService
+from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
 from shared.init_logger import init_logger
 
 
@@ -15,6 +16,7 @@ class Container:
         self._openai_client: Optional[LlmClient] = None
         self._openai_service: Optional[LlmService] = None
         self._llm_orchestrator: Optional[LlmOrchestrator] = None
+        self._wsp_service: Optional[WhatsAppService] = None
         self.log.info("[CONTAINER] Dependency container initialized successfully")
     
     
@@ -58,6 +60,21 @@ class Container:
             self._llm_orchestrator = LlmOrchestrator(llm_service=self.instance_openai_service)
             
         return self._llm_orchestrator
+
+    
+    @property
+    def wsp_service(self) -> WhatsAppService:
+        """
+        Get or create WhatsApp service instance (Singleton).
+        
+        Returns:
+            WhatsAppService: Singleton instance of WhatsApp service
+        """
+        if self._wsp_service is None:
+            self.log.info("[CONTAINER] Creating WhatsApp service instance")
+            self._wsp_service = WhatsAppService()
+            
+        return self._wsp_service
     
 instance = None
 

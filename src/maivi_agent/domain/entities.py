@@ -10,7 +10,7 @@ class Service(Enum):
 
 
 class ClassifyModel(BaseModel):
-        service : Service = Field(description= "Servicio de AGUA, LUZ, GAS o NO_VALIDO")
+    service : Service = Field(description= "Servicio de AGUA, LUZ, GAS o NO_VALIDO")
         
 
 class ExtractedData(BaseModel):

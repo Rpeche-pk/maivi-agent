@@ -1,0 +1,102 @@
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+from maivi_agent.domain.state import ReceiptState
+from maivi_agent.application.nodes import WorkFlowNodes
+from maivi_agent.infrastructure.container import get_container
+from shared.init_logger import init_logger
+
+
+log = init_logger("ReceiptWorkflow")
+
+
+def create_receipt_workflow():
+    """
+    Crea y compila el grafo de procesamiento de recibos con soporte para reintentos.
+    
+    El grafo implementa el siguiente flujo:
+    1. Clasificar imagen → Validar clasificación
+    2. Si es NO_VALIDO → Verificar intentos máximos
+    3. Si no alcanzó el límite → Solicitar nueva imagen → Esperar imagen (INTERRUPCIÓN)
+    4. Si llega nueva imagen → Volver a clasificar (loop)
+    5. Si alcanzó límite → Terminar
+    6. Si es válido → Extraer datos (TODO) → Terminar
+    
+    Returns:
+        CompiledGraph: Grafo compilado con persistencia e interrupciones configuradas
+    """
+    log.info("[GRAPH] Creating receipt processing workflow")
+    
+    # Obtener dependencias del contenedor
+    container = get_container()
+    nodes = WorkFlowNodes(
+        llm_service=container.instance_openai_service,
+        wsp_service=container.wsp_service
+    )
+    
+    # Crear el grafo con el esquema de estado
+    workflow = StateGraph(ReceiptState)
+    
+    # ===== AGREGAR NODOS =====
+    log.info("[GRAPH] Adding nodes to workflow")
+    workflow.add_node("classify_image_node", nodes.classify_image_node)
+    workflow.add_node("valid_classification_node", nodes.valid_classification_node)
+    workflow.add_node("max_intent_node", nodes.max_intent_node)
+    workflow.add_node("request_new_image_node", nodes.request_new_image_node)
+    workflow.add_node("wait_for_image", nodes.wait_for_image)
+    workflow.add_node("end_node", nodes.end_node)
+    
+    # Agregar cuando implementes la extracción de datos:
+    # workflow.add_node("extracted_data_node", nodes.extracted_data_node)
+    
+    # ===== DEFINIR FLUJO =====
+    log.info("[GRAPH] Defining workflow edges")
+    
+    # Punto de inicio: Clasificar imagen
+    workflow.add_edge(START, "classify_image_node")
+    
+    # Después de clasificar, validar
+    workflow.add_edge("classify_image_node", "valid_classification_node")
+    
+    # Los siguientes nodos usan Command para routing dinámico:
+    # - valid_classification_node decide entre max_intent_node o extracted_data_node
+    # - max_intent_node decide entre request_new_image_node o end_node
+    # - request_new_image_node va a wait_for_image
+    # - wait_for_image vuelve a classify_image_node
+    
+    # Nodo final termina el flujo
+    workflow.add_edge("end_node", END)
+    
+    # Cuando implementes extracted_data_node:
+    # workflow.add_edge("extracted_data_node", END)
+    
+    # ===== COMPILAR CON PERSISTENCIA E INTERRUPCIONES =====
+    log.info("[GRAPH] Compiling workflow with checkpointer and interruptions")
+    
+    compiled_graph = workflow.compile(
+        # Persistencia en memoria (usar Redis/PostgreSQL en producción)
+        checkpointer=MemorySaver(),
+        
+        # ⭐ CRÍTICO: Interrumpir ANTES de ejecutar wait_for_image
+        # Esto pausa el grafo hasta que llegue una nueva imagen desde WhatsApp
+        interrupt_before=["wait_for_image"]
+    )
+    
+    log.info("[GRAPH] Workflow compiled successfully")
+    return compiled_graph
+
+
+# Instancia singleton del grafo compilado
+_compiled_workflow = None
+
+
+def get_workflow():
+    """
+    Obtiene la instancia singleton del grafo compilado.
+    
+    Returns:
+        CompiledGraph: Grafo compilado listo para usar
+    """
+    global _compiled_workflow
+    if _compiled_workflow is None:
+        _compiled_workflow = create_receipt_workflow()
+    return _compiled_workflow
