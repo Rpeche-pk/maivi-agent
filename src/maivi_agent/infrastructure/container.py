@@ -6,6 +6,7 @@ from llm.infrastructure.openai_client import OpenAIClient
 from llm.infrastructure.openai_service import OpenAiService
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
 from shared.init_logger import init_logger
+from shared.config import settings
 
 
 class Container:
@@ -72,7 +73,7 @@ class Container:
         """
         if self._wsp_service is None:
             self.log.info("[CONTAINER] Creating WhatsApp service instance")
-            self._wsp_service = WhatsAppService()
+            self._wsp_service = WhatsAppService(settings.URL_WSP, settings.PHONE_NUMBER)
             
         return self._wsp_service
     

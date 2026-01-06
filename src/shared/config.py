@@ -8,5 +8,7 @@ class Settings(BaseSettings):
     NAME_AGENT :str
     PORT : int = Field(default= 3003)
     LOG_NAME : str = Field(default= "ai_service")
+    URL_WSP : str = Field(default= "ws://localhost:3003/ws")
+    PHONE_NUMBER : str = Field(default= "+1234567890")
 
 settings = Settings()

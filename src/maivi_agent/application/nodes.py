@@ -3,7 +3,7 @@ from llm.domain.llm_service import LlmService
 from maivi_agent.domain.state import ReceiptState
 from maivi_agent.domain.entities import ClassifyModel
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
-from shared import init_logger
+from shared.init_logger import init_logger
 from shared.prompts import PromptManager
 from langgraph.types import Command
 from typing import Literal
@@ -17,11 +17,11 @@ class WorkFlowNodes:
         self.log = init_logger(self.__class__.__name__)
 
     
-    async def classify_image_node(self, state: ReceiptState) -> dict[str,any]:
+    async def classify_image_node(self, state: ReceiptState) -> Command[Literal["decision_nodes_with_interrupt","end_node"]]:
         self.log.info("[NODE] Classifying image node started.")
 
         if(state.get("waiting_for_image",False)):
-            return state
+            return Command(goto="end_node" ,update=state)
 
         try:
             
@@ -37,29 +37,48 @@ class WorkFlowNodes:
                 "text_content": PromptManager.get_prompt("UserPrompts","BUILD_USER_PROMPT_IMAGE").content
             })
             self.log.info("[NODE] Classifying image node completed successfully.")
-            return {
+            
+            return Command(update ={
                 **state,
                 "is_valid": True,
                 "service_type": result.service.value,
                 "waiting_for_image": False,
                 "message_user": f"El recibo ha sido clasificado como {result.service.value}.",
-            }
+            }, goto = "decision_nodes_with_interrupt")
 
         except Exception as e:
             self.log.error("[ERROR] Classifying image node. Details %s",e)
-            return {
+            return Command(update = {
                 **state,
                 "is_valid": False,
                 "service_type": "NO_VALIDO",
                 "waiting_for_image": False,
                 "message_user": "Error al clasificar el recibo. Por favor, intente nuevamente más tarde."
-            }
-            
-    def valid_classification_node(self, state: ReceiptState) -> Command[Literal["max_intent_node","extracted_data_node"]]:
+            }, goto = "end_node")
+
+    def decision_nodes_with_interrupt(self, state: ReceiptState) -> Command[Literal["valid_classification_node","max_intent_limit_node","max_intent_node"]]:
+        self.log.info("[NODE] Decision node with interrupt started.")
+        
+        intent_count = state.get("intent_count", 0)
+        limit_intents = state.get("limit_intents", 3)
+        classification = state.get("service_type", "NO_VALIDO")
+        
+        if classification in ["AGUA","LUZ","GAS"]:
+            return Command(goto="valid_classification_node")
+        
+        if intent_count >= limit_intents:
+            return Command(goto="max_intent_limit_node")
+        
+        return Command(goto="max_intent_node")
+
+
+    def valid_classification_node(self, state: ReceiptState) -> ReceiptState:
         self.log.info("[NODE] Validating classification node started.")
         
+        return state
         
-    def max_intent_node(self, state: ReceiptState) -> Command[Literal["max_intent_node"]]:
+        
+    def max_intent_node(self, state: ReceiptState) -> Command[Literal["classify_image_node"]]:
         self.log.info(f"[NODE] Max intent validation. Intent {state.get('intent_count', 0)+1} of {state.get('limit_intents', 3)}.")
         intent_count = state.get("intent_count", 0) + 1
         limit_intents = state.get("limit_intents", 3)
@@ -84,8 +103,8 @@ class WorkFlowNodes:
             "image_base64": ""
         })
         
-    def max_intent_limit_node(self, state: ReceiptState) -> dict[str]:
-        message = f"""❌ Lo siento, no pude procesar tu recibo después de {state['max_retries']} intentos.
+    def max_intent_limit_node(self, state: ReceiptState) -> ReceiptState:
+        message = f"""❌ Lo siento, no pude procesar tu recibo después de {state.get('limit_intents', 3)} intentos.
 
         Por favor:
         1. Asegúrate de que la imagen sea clara
@@ -98,25 +117,23 @@ class WorkFlowNodes:
             to=state.get("phone_number"),
             message=message
         )
-        return {**state,
-            "is_valid": False}
-        
+        return {
+            **state,
+            "is_valid": False,
+            "message_user": message
+        }
 
-    def decision_nodes_with_interrupt(self, state: ReceiptState) -> Command[Literal["valid_classification_node","max_intent_limit_node","max_intent_node"]]:
-        self.log.info("[NODE] Decision node with interrupt started.")
+
+    def end_node(self, state: ReceiptState) -> ReceiptState:
+        """Nodo final que envía el mensaje final al usuario."""
+        self.log.info("[NODE] End node - Sending final message.")
         
-        intent_count = state.get("intent_count", 0)
-        limit_intents = state.get("limit_intents", 3)
-        classification = state.get("service_type", "NO_VALIDO")
+        self.wsp_service.send_message(
+            to=state.get("phone_number"),
+            message=state["message_user"]
+        )
         
-        if classification in ["AGUA","LUZ","GAS"]:
-            return Command(goto="valid_classification_node")
-        
-        if intent_count >= limit_intents:
-            return Command(goto="max_intent_limit_node")
-        
-        return Command(goto="max_intent_node")
-    
+        return state
 
 '''
     OPCION B USANDO INTERRUP_BEFORE WITH MEMORY
