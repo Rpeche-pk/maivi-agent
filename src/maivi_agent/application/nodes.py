@@ -1,10 +1,11 @@
 from llm.domain.llm_entities import LLMRequestConfig, UserInputType
 from llm.domain.llm_service import LlmService
 from maivi_agent.domain.state import ReceiptState
-from maivi_agent.domain.entities import ClassifyModel
+from maivi_agent.domain.entities import ClassifyModel, ExtractedData
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
 from shared.init_logger import init_logger
 from shared.prompts import PromptManager
+from shared.config import settings
 from langgraph.types import Command
 from typing import Literal
 
@@ -56,7 +57,7 @@ class WorkFlowNodes:
                 "message_user": "Error al clasificar el recibo. Por favor, intente nuevamente más tarde."
             }, goto = "end_node")
 
-    def decision_nodes_with_interrupt(self, state: ReceiptState) -> Command[Literal["valid_classification_node","max_intent_limit_node","max_intent_node"]]:
+    def decision_nodes_with_interrupt(self, state: ReceiptState) -> Command[Literal["data_extraction_node","max_intent_limit_node","max_intent_node"]]:
         self.log.info("[NODE] Decision node with interrupt started.")
         
         intent_count = state.get("intent_count", 0)
@@ -64,7 +65,7 @@ class WorkFlowNodes:
         classification = state.get("service_type", "NO_VALIDO")
         
         if classification in ["AGUA","LUZ","GAS"]:
-            return Command(goto="valid_classification_node")
+            return Command(goto="data_extraction_node")
         
         if intent_count >= limit_intents:
             return Command(goto="max_intent_limit_node")
@@ -72,11 +73,37 @@ class WorkFlowNodes:
         return Command(goto="max_intent_node")
 
 
-    def valid_classification_node(self, state: ReceiptState) -> ReceiptState:
-        self.log.info("[NODE] Validating classification node started.")
+    async def data_extraction_node(self, state: ReceiptState) -> Command[Literal["persistence_data_node"]]:
+        self.log.info("[NODE] start flow node data extraction from receipt. <<%s>>",state.get("service_type"),None)
         
+        promptSystem = PromptManager.get_prompt("SystemPrompts","PROMPT_EXTRACT_DATA").content
+        
+        config = LLMRequestConfig(
+            image_base64=state.get("image_base64"),
+            input_type=UserInputType.IMAGE,
+            temperature=0,
+            prompt= promptSystem.format(name_agent=settings.NAME_AGENT),
+            structured_output=ExtractedData
+        )
+        
+        response = await self.llm_service.set_llm_Service(config)
+        
+        result = await response.ainvoke({
+                "text_content": PromptManager.get_prompt("UserPrompts","USER_PROMPT_EXTRACT_DATA").content
+            })
+        
+        self.log.info("[NODE] Extraction from the receiving flow node, completed successfully")
+        
+        return Command(
+            update= {
+                **state,
+                "extracted_data": result
+            },
+            goto ="persistence_data_node"
+        )
+    
+    def persistence_data_node(self, state: ReceiptState) -> ReceiptState: 
         return state
-        
         
     def max_intent_node(self, state: ReceiptState) -> Command[Literal["classify_image_node"]]:
         self.log.info(f"[NODE] Max intent validation. Intent {state.get('intent_count', 0)+1} of {state.get('limit_intents', 3)}.")
@@ -137,7 +164,7 @@ class WorkFlowNodes:
 
 '''
     OPCION B USANDO INTERRUP_BEFORE WITH MEMORY
-    def valid_classification_node(self, state: ReceiptState) -> Command[Literal["max_intent_node","extracted_data_node"]]:
+    def data_extraction_node(self, state: ReceiptState) -> Command[Literal["max_intent_node","extracted_data_node"]]:
         self.log.info("[NODE] Validating classification node started.")
         try:
             if state["service_type"] == "NO_VALIDO" or state["service_type"] is None:

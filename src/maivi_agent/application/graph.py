@@ -40,7 +40,8 @@ def create_receipt_workflow():
     log.info("[GRAPH] Adding nodes to workflow")
     workflow.add_node("classify_image_node", nodes.classify_image_node)
     workflow.add_node("decision_nodes_with_interrupt", nodes.decision_nodes_with_interrupt)
-    workflow.add_node("valid_classification_node", nodes.valid_classification_node)
+    workflow.add_node("data_extraction_node", nodes.data_extraction_node)
+    workflow.add_node("persistence_data_node", nodes.persistence_data_node)
     workflow.add_node("max_intent_node", nodes.max_intent_node)
     workflow.add_node("max_intent_limit_node", nodes.max_intent_limit_node)
     workflow.add_node("end_node", nodes.end_node)
@@ -55,7 +56,8 @@ def create_receipt_workflow():
     workflow.add_edge(START, "classify_image_node")
 
     # Después de clasificar, validar
-    workflow.add_edge("valid_classification_node", END)
+    workflow.add_edge("data_extraction_node", END)
+    workflow.add_edge("persistence_data_node", END)
 
     # Nodo final termina el flujo
     workflow.add_edge("end_node", END)

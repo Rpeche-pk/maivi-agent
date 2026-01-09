@@ -6,10 +6,22 @@ from IPython.display import Image, display
 from maivi_agent.application.graph import get_workflow
 
 
-def print_image_node():
+def save_graph_image():
+    """Guarda la imagen del grafo en un archivo PNG."""
     compiled_graph = get_workflow()
     
-    display(Image(compiled_graph.get_graph(xray=True).draw_mermaid_png()))
+    # Generar la imagen PNG
+    png_bytes = compiled_graph.get_graph(xray=True).draw_mermaid_png()
+    
+    # Guardar en archivo
+    with open("graph_workflow.png", "wb") as f:
+        f.write(png_bytes)
+    
+    print("✅ Imagen del grafo guardada en: graph_workflow.png")
+    
+    # Opcional: También mostrar en Jupyter/IPython
+    display(Image(png_bytes))
+
 
 if __name__ == "__main__":
-    print_image_node()
+    save_graph_image()
