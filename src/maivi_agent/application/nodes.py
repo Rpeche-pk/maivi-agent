@@ -104,6 +104,8 @@ class WorkFlowNodes:
     
     def persistence_data_node(self, state: ReceiptState) -> ReceiptState: 
         return state
+
+    
         
     def max_intent_node(self, state: ReceiptState) -> Command[Literal["classify_image_node"]]:
         self.log.info(f"[NODE] Max intent validation. Intent {state.get('intent_count', 0)+1} of {state.get('limit_intents', 3)}.")

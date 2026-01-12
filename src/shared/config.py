@@ -10,5 +10,8 @@ class Settings(BaseSettings):
     LOG_NAME : str = Field(default= "ai_service")
     URL_WSP : str = Field(default= "ws://localhost:3003/ws")
     PHONE_NUMBER : str = Field(default= "+1234567890")
+    IMAGEKIT_PRIVATE_KEY: str
+    IMAGEKIT_PUBLIC_KEY: str
+    URL_ENDPOINT_IMAGEKIT: str
 
 settings = Settings()

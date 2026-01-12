@@ -7,3 +7,5 @@ requests
 pydantic
 pydantic-settings
 ipython
+imagekitio[aiohttp]
+fastapi[standard]

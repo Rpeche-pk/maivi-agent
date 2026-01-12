@@ -23,5 +23,6 @@ def save_graph_image():
     display(Image(png_bytes))
 
 
+
 if __name__ == "__main__":
     save_graph_image()
