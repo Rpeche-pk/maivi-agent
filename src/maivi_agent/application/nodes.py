@@ -1,5 +1,6 @@
 from llm.domain.llm_entities import LLMRequestConfig, UserInputType
 from llm.domain.llm_service import LlmService
+from maivi_agent.domain.image_storage import ImageStorage
 from maivi_agent.domain.state import ReceiptState
 from maivi_agent.domain.entities import ClassifyModel, ExtractedData
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
@@ -12,9 +13,10 @@ from typing import Literal
 class WorkFlowNodes:
     """class WorkFlowNodes"""
     
-    def __init__(self,llm_service : LlmService, wsp_service: WhatsAppService):
+    def __init__(self,llm_service : LlmService, wsp_service: WhatsAppService, image_service: ImageStorage):
         self.llm_service = llm_service
         self.wsp_service = wsp_service
+        self.image_service = image_service
         self.log = init_logger(self.__class__.__name__)
 
     
@@ -25,7 +27,6 @@ class WorkFlowNodes:
             return Command(goto="end_node" ,update=state)
 
         try:
-            
             request_config = LLMRequestConfig(
                 input_type=UserInputType.IMAGE,
                 image_base64=state["image_base64"],
@@ -74,7 +75,7 @@ class WorkFlowNodes:
 
 
     async def data_extraction_node(self, state: ReceiptState) -> Command[Literal["persistence_data_node"]]:
-        self.log.info("[NODE] start flow node data extraction from receipt. <<%s>>",state.get("service_type"),None)
+        self.log.info("[NODE - data_extraction_node] start flow node data extraction from receipt. <<%s>>",state.get("service_type"),None)
         
         promptSystem = PromptManager.get_prompt("SystemPrompts","PROMPT_EXTRACT_DATA").content
         
@@ -92,20 +93,41 @@ class WorkFlowNodes:
                 "text_content": PromptManager.get_prompt("UserPrompts","USER_PROMPT_EXTRACT_DATA").content
             })
         
-        self.log.info("[NODE] Extraction from the receiving flow node, completed successfully")
+        self.log.info("[NODE - data_extraction_node] Extraction from the receiving flow node, completed successfully")
         
         return Command(
             update= {
                 **state,
                 "extracted_data": result
             },
-            goto ="persistence_data_node"
+            goto ="upload_image_node"
         )
     
-    def persistence_data_node(self, state: ReceiptState) -> ReceiptState: 
+    async def upload_image_node(self, state: ReceiptState) -> Command[Literal["persistence_data_node"]]:
+
+        self.log.info("[NODE - upload_image_node] Start node upload image node")
+        
+        image_base64= state.get("image_base64")
+        file_name= state.get("service_type","RECEIPT")
+        tag = state.get("service_type")
+        
+        url = await self.image_service.upload_image(file_doc=image_base64, file_name=file_name,tags= tag)
+        
+        self.log.info("[NODE - upload_image_node] Finish node upload image node success")
+        
+        return Command(update={
+            **state,
+            "image_base64" : url
+        }, goto="persistence_data_node")
+    
+    def persistence_data_node(self, state: ReceiptState) -> ReceiptState:
+        
+        self.log.info("[NODE - persistence_data_node] start of execution of the persistence node")
+        
+        
+        
         return state
 
-    
         
     def max_intent_node(self, state: ReceiptState) -> Command[Literal["classify_image_node"]]:
         self.log.info(f"[NODE] Max intent validation. Intent {state.get('intent_count', 0)+1} of {state.get('limit_intents', 3)}.")

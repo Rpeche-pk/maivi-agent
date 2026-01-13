@@ -4,13 +4,16 @@ from llm.domain.llm_client import LlmClient
 from llm.domain.llm_service import LlmService
 from llm.infrastructure.openai_client import OpenAIClient
 from llm.infrastructure.openai_service import OpenAiService
+from maivi_agent.domain.image_storage import ImageStorage
+from maivi_agent.domain.receipts_repository import ReceiptsRepository
+from maivi_agent.infrastructure.image_storage_service import ImageStorageService
+from maivi_agent.infrastructure.receipts_repository_impl import ReceiptsRepositoryImpl
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
 from shared.init_logger import init_logger
 from shared.config import settings
 
-
 class Container:
-    
+
     def __init__(self):
         self.log = init_logger(self.__class__.__name__)
         self.log.info("[CONTAINER] Initializing dependency container")
@@ -18,9 +21,10 @@ class Container:
         self._openai_service: Optional[LlmService] = None
         self._llm_orchestrator: Optional[LlmOrchestrator] = None
         self._wsp_service: Optional[WhatsAppService] = None
+        self._image_storage_service: Optional[ImageStorage]= None
+        self._receipt_repository: Optional[ReceiptsRepository]= None
         self.log.info("[CONTAINER] Dependency container initialized successfully")
-    
-    
+
     @property
     def instance_openai_client(self) -> LlmClient:
         """
@@ -33,7 +37,7 @@ class Container:
             self.log.info("[CONTAINER] Creating OpenAI client instance")
             self._openai_client = OpenAIClient()
         return self._openai_client
-        
+
     @property
     def instance_openai_service(self) -> LlmService:
         """
@@ -47,7 +51,7 @@ class Container:
             self._openai_service = OpenAiService()
             
         return self._openai_service
-    
+
     @property
     def llm_orchestrator(self) -> LlmOrchestrator:
         """
@@ -62,7 +66,6 @@ class Container:
             
         return self._llm_orchestrator
 
-    
     @property
     def wsp_service(self) -> WhatsAppService:
         """
@@ -76,7 +79,35 @@ class Container:
             self._wsp_service = WhatsAppService(settings.URL_WSP, settings.PHONE_NUMBER)
             
         return self._wsp_service
-    
+
+    @property
+    def storage_service(self) -> ImageStorage:
+        """
+        Get or create Image Storage instance (Singleton).
+        
+        Returns:
+            ImageStorage: Singleton instance of Image Storage service
+        """
+        if self._image_storage_service is None:
+            self.log.info("[CONTAINER] Creating Image Storage service instance")
+            self._image_storage_service = ImageStorageService()
+            
+        return self._image_storage_service
+
+    @property
+    def receipt_repository(self) -> ReceiptsRepository:
+        """
+        Get or create Image Storage instance (Singleton).
+        
+        Returns:
+            ImageStorage: Singleton instance of Image Storage service
+        """
+        if self._receipt_repository is None:
+            self.log.info("[CONTAINER] Creating Image Storage service instance")
+            self._receipt_repository = ReceiptsRepositoryImpl()
+            
+        return self._receipt_repository
+
 instance = None
 
 def get_container() -> Container:

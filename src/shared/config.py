@@ -13,5 +13,8 @@ class Settings(BaseSettings):
     IMAGEKIT_PRIVATE_KEY: str
     IMAGEKIT_PUBLIC_KEY: str
     URL_ENDPOINT_IMAGEKIT: str
+    DATABASE_URL: str
+    DATABASE_NAME :str
+    COLLECTION_NAME:str
 
 settings = Settings()

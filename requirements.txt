@@ -9,3 +9,4 @@ pydantic-settings
 ipython
 imagekitio[aiohttp]
 fastapi[standard]
+pymongo
