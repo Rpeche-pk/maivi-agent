@@ -2,13 +2,32 @@
 Punto de entrada principal de la aplicación Maivi Agent.
 Ejecuta el sistema de clasificación de recibos.
 """
-import asyncio
 import base64
+from datetime import datetime
 from IPython.display import Image, display
 from maivi_agent.application.graph import get_workflow
 
+from maivi_agent.domain.entities import ReceiptDataSave, Service
 from maivi_agent.infrastructure.image_storage_service import get_instance
 
+
+def insert_data_mongo():
+    from maivi_agent.infrastructure.receipts_repository_impl import ReceiptsRepositoryImpl
+    repo= ReceiptsRepositoryImpl()
+    
+    body= ReceiptDataSave(
+        phone_number="51987654321",
+        service_type=Service.LUZ,
+        is_valid=True,
+        is_notified=False,
+        amount_total=125.50,
+        date_expired="25/02/2026",
+        consumption_period="Diciembre 2025",
+        company="Luz del Sur",
+        link_receipt_image="https://ik.imagekit.io/ljpa/maipevi.mp4"
+    )
+    receipt_id= repo.save_receipt(body)
+    print(f"✅ Recibo insertado con ID: {receipt_id}")
 
 async def imagekit_io():
     image_Service= get_instance()
@@ -35,4 +54,5 @@ def save_graph_image():
 
 
 if __name__ == "__main__":
-    asyncio.run(imagekit_io())
+    #asyncio.run(imagekit_io())
+    insert_data_mongo()

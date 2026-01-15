@@ -1,8 +1,9 @@
 from llm.domain.llm_entities import LLMRequestConfig, UserInputType
 from llm.domain.llm_service import LlmService
 from maivi_agent.domain.image_storage import ImageStorage
+from maivi_agent.domain.receipts_repository import ReceiptsRepository
 from maivi_agent.domain.state import ReceiptState
-from maivi_agent.domain.entities import ClassifyModel, ExtractedData
+from maivi_agent.domain.entities import ClassifyModel, ExtractedData, ReceiptDataSave
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
 from shared.init_logger import init_logger
 from shared.prompts import PromptManager
@@ -13,10 +14,11 @@ from typing import Literal
 class WorkFlowNodes:
     """class WorkFlowNodes"""
     
-    def __init__(self,llm_service : LlmService, wsp_service: WhatsAppService, image_service: ImageStorage):
+    def __init__(self,llm_service : LlmService, wsp_service: WhatsAppService, image_service: ImageStorage, receipts_repository:ReceiptsRepository):
         self.llm_service = llm_service
         self.wsp_service = wsp_service
         self.image_service = image_service
+        self.receipts_repository = receipts_repository
         self.log = init_logger(self.__class__.__name__)
 
     
@@ -119,14 +121,53 @@ class WorkFlowNodes:
             **state,
             "image_base64" : url
         }, goto="persistence_data_node")
-    
-    def persistence_data_node(self, state: ReceiptState) -> ReceiptState:
+
+    def persistence_data_node(self, state: ReceiptState) -> Command[Literal["send_confirmation_node"]]:
         
         self.log.info("[NODE - persistence_data_node] start of execution of the persistence node")
         
+        extracted_data = state.get("extracted_data", ExtractedData())
         
+        body = ReceiptDataSave(
+            phone_number= state.get("phone_number"),
+            service_type= state.get("service_type"),
+            is_valid= state.get("is_valid", False),
+            is_notified= False,
+            amount_total= extracted_data.amount_total,
+            date_expired= extracted_data.date_expired,
+            consumption_period= extracted_data.consumption_period,
+            company= extracted_data.company,
+            link_receipt_image= state.get("image_base64")
+        )
         
-        return state
+        response = self.receipts_repository.save_receipt(body)
+        
+        self.log.info("[NODE - persistence_data_node] Receipt data saved successfully. ID: %s",response)
+        
+        return Command(update=state, goto="send_confirmation_node")
+    
+    def send_confirmation_node(self, state: ReceiptState) -> Command[Literal["end_node"]]:
+        self.log.info("[NODE] Sending confirmation message to user.")
+        
+        data_extracted = state.get("extracted_data",ExtractedData())
+        
+        type_service = {"LUZ": "💡", "AGUA": "💧", "GAS": "🔥"}.get(state["service_type"], "📄")
+        
+        message = f"""✅ Tu recibo ha sido procesado exitosamente.
+        
+        Detalles:
+        - Tipo de servicio: {type_service} {state.get('service_type')}
+        - Monto total a pagar: {data_extracted.amount_total if data_extracted else 'N/A'}
+        - Fecha de vencimiento: {data_extracted.date_expired if data_extracted else 'N/A'}
+        - Período de consumo: {data_extracted.consumption_period if data_extracted else 'N/A'}
+        - Compañía: {data_extracted.company if data_extracted else 'N/A'}
+        
+        Gracias por usar Maivi, tu asistente de gestión de recibos."""
+    
+        return Command( update={
+            **state,
+            "message_user": message
+        }, goto="end_node")
 
         
     def max_intent_node(self, state: ReceiptState) -> Command[Literal["classify_image_node"]]:

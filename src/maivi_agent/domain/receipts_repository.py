@@ -4,7 +4,7 @@ from maivi_agent.domain.entities import ReceiptDataSave
 class ReceiptsRepository(ABC):
     """Repositorio abstracto para la gestión de recibos procesados."""
     @abstractmethod
-    async def save_receipt(self, receipt_data: ReceiptDataSave) -> str:
+    def save_receipt(self, receipt_data: ReceiptDataSave) -> str:
         """
         Guarda los datos del recibo procesado en el repositorio.
         Args:
@@ -15,7 +15,7 @@ class ReceiptsRepository(ABC):
         pass
     
     @abstractmethod
-    async def get_receipts_by_service(self, phone_number: str, service_type: str) -> list[ReceiptDataSave]:
+    def get_receipts_by_service(self, phone_number: str, service_type: str) -> list[ReceiptDataSave]:
         """
         Obtiene los recibos procesados por tipo de servicio para un usuario específico.
         Args:
@@ -26,7 +26,7 @@ class ReceiptsRepository(ABC):
         pass
     
     @abstractmethod
-    async def mark_as_notified(self, receipt_id: str) -> None:
+    def mark_as_notified(self, receipt_id: str) -> None:
         """Marca un recibo como notificado al usuario.
         Args:
             receipt_id (str): ID del recibo a marcar.
@@ -34,7 +34,7 @@ class ReceiptsRepository(ABC):
         pass
     
     @abstractmethod
-    async def obtain_receipt_expire_by_date(self, date_expired: str) -> list[ReceiptDataSave]:
+    def obtain_receipt_expire_by_date(self, date_expired: str) -> list[ReceiptDataSave]:
         """Obtiene los recibos que vencen en una fecha específica.
         Args:
             date_expired (str): Fecha de vencimiento en formato dd/MM/yyyy.

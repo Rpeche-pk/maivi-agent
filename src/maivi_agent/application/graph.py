@@ -30,7 +30,9 @@ def create_receipt_workflow():
     container = get_container()
     nodes = WorkFlowNodes(
         llm_service=container.instance_openai_service,
-        wsp_service=container.wsp_service
+        wsp_service=container.wsp_service,
+        image_service=container.storage_service,
+        receipts_repository=container.receipt_repository
     )
 
     # Crear el grafo con el esquema de estado
@@ -41,30 +43,30 @@ def create_receipt_workflow():
     workflow.add_node("classify_image_node", nodes.classify_image_node)
     workflow.add_node("decision_nodes_with_interrupt", nodes.decision_nodes_with_interrupt)
     workflow.add_node("data_extraction_node", nodes.data_extraction_node)
+    workflow.add_node("upload_image_node", nodes.upload_image_node)
     workflow.add_node("persistence_data_node", nodes.persistence_data_node)
+    workflow.add_node("send_confirmation_node", nodes.send_confirmation_node)
     workflow.add_node("max_intent_node", nodes.max_intent_node)
     workflow.add_node("max_intent_limit_node", nodes.max_intent_limit_node)
     workflow.add_node("end_node", nodes.end_node)
-
-    # Agregar cuando implementes la extracción de datos:
-    # workflow.add_node("extracted_data_node", nodes.extracted_data_node)
 
     # ===== DEFINIR FLUJO =====
     log.info("[GRAPH] Defining workflow edges")
 
     # Punto de inicio: Clasificar imagen
     workflow.add_edge(START, "classify_image_node")
-
-    # Después de clasificar, validar
-    workflow.add_edge("data_extraction_node", END)
-    workflow.add_edge("persistence_data_node", END)
-
-    # Nodo final termina el flujo
+    
+    # - classify_image_node -> decision_nodes_with_interrupt | end_node
+    # - decision_nodes_with_interrupt -> data_extraction_node | max_intent_limit_node | max_intent_node
+    # - data_extraction_node -> upload_image_node
+    # - upload_image_node -> persistence_data_node
+    # - persistence_data_node -> send_confirmation_node
+    # - send_confirmation_node -> end_node
+    # - max_intent_node -> classify_image_node
+    
+    # Nodos finales que terminan el flujo
     workflow.add_edge("end_node", END)
     workflow.add_edge("max_intent_limit_node", END)
-    
-    # Cuando implementes extracted_data_node:
-    # workflow.add_edge("extracted_data_node", END)
     
     # ===== COMPILAR CON PERSISTENCIA E INTERRUPCIONES =====
     log.info("[GRAPH] Compiling workflow with checkpointer and interruptions")
