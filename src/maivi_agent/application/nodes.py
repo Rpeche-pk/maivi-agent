@@ -5,6 +5,7 @@ from maivi_agent.domain.receipts_repository import ReceiptsRepository
 from maivi_agent.domain.state import ReceiptState
 from maivi_agent.domain.entities import ClassifyModel, ExtractedData, ReceiptDataSave
 from maivi_agent.infrastructure.whatsapp_service import WhatsAppService
+from maivi_agent.infrastructure.calcom_notification_service import get_calcom_service
 from shared.init_logger import init_logger
 from shared.prompts import PromptManager
 from shared.config import settings
@@ -23,9 +24,10 @@ class WorkFlowNodes:
 
     
     async def classify_image_node(self, state: ReceiptState) -> Command[Literal["decision_nodes_with_interrupt","end_node"]]:
-        self.log.info("[NODE] Classifying image node started.")
+        self.log.info("[NODE - classify_image_node] Classifying image node started.")
 
         if(state.get("waiting_for_image",False)):
+            self.log.info("[NODE - classify_image_node] Waiting for image from user. Skipping classification.")
             return Command(goto="end_node" ,update=state)
 
         try:
@@ -40,7 +42,7 @@ class WorkFlowNodes:
             result = await chain.ainvoke({
                 "text_content": PromptManager.get_prompt("UserPrompts","BUILD_USER_PROMPT_IMAGE").content
             })
-            self.log.info("[NODE] Classifying image node completed successfully.")
+            self.log.info("[NODE - classify_image_node] Classifying image node completed successfully.")
             
             return Command(update ={
                 **state,
@@ -61,7 +63,7 @@ class WorkFlowNodes:
             }, goto = "end_node")
 
     def decision_nodes_with_interrupt(self, state: ReceiptState) -> Command[Literal["data_extraction_node","max_intent_limit_node","max_intent_node"]]:
-        self.log.info("[NODE] Decision node with interrupt started.")
+        self.log.info("[NODE - decision_nodes_with_interrupt] Decision node with interrupt started.")
         
         intent_count = state.get("intent_count", 0)
         limit_intents = state.get("limit_intents", 3)
@@ -76,7 +78,7 @@ class WorkFlowNodes:
         return Command(goto="max_intent_node")
 
 
-    async def data_extraction_node(self, state: ReceiptState) -> Command[Literal["persistence_data_node"]]:
+    async def data_extraction_node(self, state: ReceiptState) -> Command[Literal["upload_image_node"]]:
         self.log.info("[NODE - data_extraction_node] start flow node data extraction from receipt. <<%s>>",state.get("service_type"),None)
         
         promptSystem = PromptManager.get_prompt("SystemPrompts","PROMPT_EXTRACT_DATA").content
@@ -146,7 +148,7 @@ class WorkFlowNodes:
         
         return Command(update=state, goto="send_confirmation_node")
     
-    def send_confirmation_node(self, state: ReceiptState) -> Command[Literal["end_node"]]:
+    async def send_confirmation_node(self, state: ReceiptState) -> Command[Literal["end_node"]]:
         self.log.info("[NODE] Sending confirmation message to user.")
         
         data_extracted = state.get("extracted_data",ExtractedData())
@@ -157,13 +159,38 @@ class WorkFlowNodes:
         
         Detalles:
         - Tipo de servicio: {type_service} {state.get('service_type')}
-        - Monto total a pagar: {data_extracted.amount_total if data_extracted else 'N/A'}
+        - Monto total a pagar: S/ {data_extracted.amount_total if data_extracted else 'N/A'}
         - Fecha de vencimiento: {data_extracted.date_expired if data_extracted else 'N/A'}
         - Período de consumo: {data_extracted.consumption_period if data_extracted else 'N/A'}
         - Compañía: {data_extracted.company if data_extracted else 'N/A'}
         
         Gracias por usar Maivi, tu asistente de gestión de recibos."""
-    
+        
+        # Programar notificaciones con CAL.COM
+        notifications_count = 0
+        try:
+            calcom = get_calcom_service()
+            # Generar email basado en el número de teléfono
+            phone_clean = state.get("phone_number", "").replace("+", "")
+            attendee_email = f"{phone_clean}@notification.maivi.com"
+
+            notifications = await calcom.schedule_payment_notifications(
+                service_type=state.get("service_type", "SERVICIO"),
+                company=data_extracted.company or "Compañía",
+                amount_total=data_extracted.amount_total or 0.0,
+                date_expired=data_extracted.date_expired or "N/A",
+                consumption_period=data_extracted.consumption_period or "N/A",
+                attendee_email=attendee_email,
+                attendee_name=f"Usuario {phone_clean}",
+                phone_number=state.get("phone_number")
+            )
+
+            notifications_count = len(notifications)
+            if notifications_count > 0:
+                self.log.info(f"[NODE - persistence_data_node] {notifications_count} notificaciones programadas")
+        except Exception as e:
+            self.log.error(f"[NODE - persistence_data_node] Error al programar notificaciones: {e}")
+
         return Command( update={
             **state,
             "message_user": message

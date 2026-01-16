@@ -1,0 +1,46 @@
+2026-01-12 05:48:50 PM - ai_service.ImageStorageService - INFO - upload_image - ⬆️  Subiendo imagen a ImageKit en folder: /AGENT-AI/recibos con nombre: graph_workflow.png
+2026-01-12 05:48:50 PM - ai_service.ImageStorageService - ERROR - upload_image - ❌ Error subiendo imagen a ImageKit: FilesResource.upload() got an unexpected keyword argument 'options'
+Traceback (most recent call last):
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\src\maivi_agent\infrastructure\image_storage_service.py", line 26, in upload_image
+    response= self.imagekit.files.upload(
+        file=image_base64,
+    ...<2 lines>...
+        options= options if options else {}
+    )
+TypeError: FilesResource.upload() got an unexpected keyword argument 'options'
+2026-01-12 05:50:58 PM - ai_service.ImageStorageService - INFO - upload_image - ⬆️  Subiendo imagen a ImageKit en folder: /AGENT-AI/recibos con nombre: graph_workflow.png
+2026-01-12 05:50:58 PM - ai_service.ImageStorageService - ERROR - upload_image - ❌ Error subiendo imagen a ImageKit: Expected entry at `file` to be bytes, an io.IOBase instance, PathLike or a tuple but received <class 'str'> instead. See https://github.com/imagekit-developer/imagekit-python/tree/master#file-uploads
+Traceback (most recent call last):
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\src\maivi_agent\infrastructure\image_storage_service.py", line 26, in upload_image
+    response= self.imagekit.files.upload(
+        file=image_base64,
+    ...<2 lines>...
+        tags=tags
+    )
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\.venv\Lib\site-packages\imagekitio\resources\files\files.py", line 730, in upload
+    files = extract_files(cast(Mapping[str, object], body), paths=[["file"]])
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\.venv\Lib\site-packages\imagekitio\_utils\_utils.py", line 52, in extract_files
+    files.extend(_extract_items(query, path, index=0, flattened_key=None))
+                 ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\.venv\Lib\site-packages\imagekitio\_utils\_utils.py", line 103, in _extract_items
+    return _extract_items(
+        item,
+    ...<2 lines>...
+        flattened_key=flattened_key,
+    )
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\.venv\Lib\site-packages\imagekitio\_utils\_utils.py", line 83, in _extract_items
+    assert_is_file_content(obj, key=flattened_key)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\.venv\Lib\site-packages\imagekitio\_files.py", line 36, in assert_is_file_content
+    raise RuntimeError(
+        f"{prefix} to be bytes, an io.IOBase instance, PathLike or a tuple but received {type(obj)} instead. See https://github.com/imagekit-developer/imagekit-python/tree/master#file-uploads"
+    ) from None
+RuntimeError: Expected entry at `file` to be bytes, an io.IOBase instance, PathLike or a tuple but received <class 'str'> instead. See https://github.com/imagekit-developer/imagekit-python/tree/master#file-uploads
+2026-01-12 06:07:02 PM - ai_service.ImageStorageService - INFO - upload_image - ⬆️  Subiendo imagen a ImageKit en folder: /AGENT-AI/recibos con nombre: graph_workflow.png
+2026-01-12 06:07:03 PM - ai_service.ImageStorageService - ERROR - upload_image - ❌ Error subiendo imagen a ImageKit: 'ImageStorageService' object has no attribute 'url_endpoint'
+Traceback (most recent call last):
+  File "C:\Users\LRPA\Documents\Langgraph-python\agent_ai\src\maivi_agent\infrastructure\image_storage_service.py", line 35, in upload_image
+    return f"{self.url_endpoint}{response['response']['filePath']}"
+              ^^^^^^^^^^^^^^^^^
+AttributeError: 'ImageStorageService' object has no attribute 'url_endpoint'
+2026-01-12 06:18:10 PM - ai_service.ImageStorageService - INFO - upload_image - ⬆️  Subiendo imagen a ImageKit en folder: /AGENT-AI/recibos con nombre: grafo-agente-ai.png

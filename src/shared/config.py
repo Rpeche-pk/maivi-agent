@@ -16,5 +16,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DATABASE_NAME :str
     COLLECTION_NAME:str
+    
+    # CAL.COM
+    CALCOM_API_KEY: str = Field(default="")
+    CALCOM_EVENT_TYPE_ID: int = Field(default=0)
 
 settings = Settings()
