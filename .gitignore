@@ -71,3 +71,9 @@ temp/
 tmp/
 cache/
 data/local/
+
+# Google Calendar credentials
+credentials/
+*credentials*.json
+!package.json
+!tsconfig.json

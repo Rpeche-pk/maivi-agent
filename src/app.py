@@ -4,11 +4,12 @@ Ejecuta el sistema de clasificación de recibos.
 """
 import asyncio
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 from IPython.display import Image, display
 from maivi_agent.application.graph import get_workflow
 
 from maivi_agent.domain.entities import ReceiptDataSave, Service
+from maivi_agent.infrastructure.google_calendar_service import get_google_calendar_service
 from maivi_agent.infrastructure.image_storage_service import get_instance
 
 from maivi_agent.infrastructure.calcom_notification_service import get_calcom_service
@@ -73,12 +74,17 @@ async def calcom_notifications():
     print("   📧 Emails adicionales: admin@ejemplo.com, contador@ejemplo.com")
     print()
     
+    future_date = datetime.now() + timedelta(days=3)
+    date_expired = future_date.strftime("%d/%m/%Y")
+    
+    print(f"   📅 Fecha de vencimiento del recibo: {date_expired}")
+    
     notifications = await calcom.schedule_payment_notifications(
         service_type="LUZ",
         company="ELECTRODUNAS",
         amount_total=150.50,
-        date_expired="25/01/2026",  # dd/MM/yyyy
-        consumption_period="Diciembre 2025",
+        date_expired=date_expired,  # dd/MM/yyyy
+        consumption_period="ENERO 2026",
         attendee_email="pecheaparcana1998@gmail.com",
         attendee_name="Luis Peche",
         phone_number="+51966524537",
@@ -96,9 +102,48 @@ async def calcom_notifications():
         print(f"     Inicio: {booking.get('start')}")
         print()
 
+async def test_schedule_notifications():
+    """Prueba la programación de notificaciones de pago."""
+    
+    # Obtener el servicio
+    calendar_service = get_google_calendar_service()
+    
+    # Datos de ejemplo de un recibo
+    result = await calendar_service.schedule_payment_notifications(
+        service_type="LUZ",
+        company="ENEL",
+        amount_total=150.75,
+        date_expired="20/02/2026",  # 8 días después de hoy (12/02/2026)
+        consumption_period="Enero 2026",
+        attendee_email="pecheaparcana1998@gmail.com",  # 👈 Cambia este email
+        attendee_name="María Angela",
+        phone_number="+51987654321",
+        additional_emails=[]  # Opcional
+    )
+    
+    print("\n" + "="*60)
+    print("RESULTADOS DE LA PROGRAMACIÓN")
+    print("="*60)
+    
+    if result:
+        for notification in result:
+            print(f"\n📅 Tipo: {notification['type']}")
+            event = notification['event']
+            print(f"   ID: {event.get('id')}")
+            print(f"   Título: {event.get('summary')}")
+            print(f"   Inicio: {event.get('start', {}).get('dateTime')}")
+            print(f"   Link: {event.get('htmlLink')}")
+    else:
+        print("\n⚠️  No se programaron notificaciones")
+        print("Verifica tu configuración en el archivo .env:")
+        print("  - GOOGLE_CALENDAR_ID")
+        print("  - GOOGLE_CALENDAR_CREDENTIALS_PATH")
+    
+    print("\n" + "="*60)
+
 
 if __name__ == "__main__":
     #asyncio.run(imagekit_io())
     #insert_data_mongo()
     #save_graph_image()
-    asyncio.run(calcom_notifications())
+    asyncio.run(test_schedule_notifications())

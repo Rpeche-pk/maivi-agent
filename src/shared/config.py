@@ -20,5 +20,9 @@ class Settings(BaseSettings):
     # CAL.COM
     CALCOM_API_KEY: str = Field(default="")
     CALCOM_EVENT_TYPE_ID: int = Field(default=0)
+    
+    # GOOGLE CALENDAR
+    GOOGLE_CALENDAR_ID: str = Field(default="")
+    GOOGLE_CALENDAR_CREDENTIALS_PATH: str = Field(default="")
 
 settings = Settings()
