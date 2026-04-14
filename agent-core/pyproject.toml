@@ -1,0 +1,18 @@
+[project]
+name = "agent-ai"
+version = "0.1.0"
+description = "Agent specialized in classifying electricity, water and gas bills in the Peruvian state"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    {name = "LRPA", email = "bosiocerati98@gmail.com"}
+]
+dependencies = [
+]
+
+[tool.setuptools.packages.find]
+where = ["./"]
+include = ["src"]
+
+[project.scripts]
+start= "src.app:main"
