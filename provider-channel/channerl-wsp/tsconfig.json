@@ -15,8 +15,9 @@
     "rootDir": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "~/*": ["./src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

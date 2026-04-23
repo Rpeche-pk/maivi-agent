@@ -1,5 +1,6 @@
 {
     "conventionalCommits.scopes": [
-        "init dev channel"
+        "init dev channel",
+        "flow"
     ]
 }
